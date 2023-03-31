@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mouth Controlled Guitar Effects</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="scripts/ml5.min.js"></script>
+  </head>
+
+  <body>
+    <div class='app'>
+      <h1>Open and close your mouth to control the active effect <span class="emoji">🎸</span></h1>
+      <div class="app-container">
+        <div class="canvas-container">
+          <span id="loading-spinner"></span>
+          <canvas id='main-canvas'></canvas>
+        </div>
+        <div class="controls">
+          <p style="display: inline-block; margin-left: 12px; margin-right: 4px;">Mic input selection (for best results, use an audio interface):</p>
+          <select id='audio-input-select'></select>
+        </div>
+        <button id="ir-button">Disable IR</button>
+        <div class="effect-choice">
+          <div class="radio-container">
+            <input checked name="effect" class="radio" type="radio" id="volume"></input>
+            <label for="volume">Volume</label>
+          </div>
+          <div class="radio-container">
+            <input name="effect" type="radio" class="radio" id="wah"></input>
+            <label for="wah">Wah Wah</label>
+          </div>
+          <div class="radio-container"> 
+            <input name="effect" type="radio" class="radio" id="pitch"></input>
+            <label for="pitch">Pitch Shift</label>
+          </div>
+        </div>
+        <p class="active-effect-title">
+          Current active effect:
+          <p id='current-effect-text'>Volume</p>
+        </p>
+      </div>
+    </div>
+    <script src="index.js"></script>
+  </body>
+</html>

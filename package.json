@@ -1,0 +1,13 @@
+{
+  "name": "guitar-experiments",
+  "version": "1.0.0",
+  "description": "Testing Web Audio API and P5",
+  "main": "index.js",
+  "scripts": {},
+  "author": "rlfriedman",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.36.0",
+    "eslint-plugin-p5js": "^1.0.0"
+  }
+}
