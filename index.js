@@ -243,8 +243,7 @@ function createOverdrive() {
   return overdrive;
 }
 
-// Set default values
-// @link https://developer.mozilla.org/en-US/docs/Web/API/WaveShaperNode
+// Copied from: https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createWaveShaper#examples.
 function makeDistortionCurve(amount) {
   const k = typeof amount === "number" ? amount : 50;
   const n_samples = 44100;
@@ -286,7 +285,6 @@ function gotResults(err, result) {
     return;
   }
 
-  // console.log(result)
   detections = result;
 
   // Clear part of the canvas
@@ -412,10 +410,8 @@ function createCanvas(w, h) {
 }
 
 function setWahWahFreq(value) {
-  const minFreq = 500;
   const maxFreq = 2200;
   const newFreq = maxFreq * value;
-  //console.log(newFreq);
   wahWahNode.frequency.setValueAtTime(newFreq, audioContext.currentTime);
 }
 

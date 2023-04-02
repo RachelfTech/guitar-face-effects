@@ -131,3 +131,23 @@ p {
   #loading-spinner.hidden {
     display: none;
   }
+
+  .github-icon {
+    background-color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+  }
+
+  .github-link {
+    margin-left: 8px;
+    color: #FFFFFF;
+    text-decoration: none;
+    display: flex;
+    margin-top: 12px;
+  }
+
+  .github-link:hover {
+    opacity: 87%;
+  }
