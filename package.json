@@ -1,10 +1,10 @@
 {
-  "name": "guitar-experiments",
+  "name": "guitar-face-effects",
   "version": "1.0.0",
-  "description": "Testing Web Audio API and P5",
+  "description": "Control guitar effects with your mouth.",
   "main": "index.js",
   "scripts": {},
-  "author": "rlfriedman",
+  "author": "RachelfTech",
   "license": "ISC",
   "devDependencies": {
     "eslint": "^8.36.0",
