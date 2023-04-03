@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guitar Face Effects</title>
-    <link rel="stylesheet" type="text/css" href="style.css?v=3">
-    <script src="scripts/ml5.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="src/style.css?v=3">
+    <script src="libraries/ml5.min.js"></script>
   </head>
 
   <body>
@@ -20,7 +20,6 @@
           <p style="display: inline-block; margin-left: 12px; margin-right: 4px;">Mic input selection (for best results, use an audio interface):</p>
           <select id='audio-input-select'></select>
         </div>
-        <button id="ir-button">Disable IR</button>
         <div class="effect-choice">
           <div class="radio-container">
             <input checked name="effect" class="radio" type="radio" id="volume"></input>
@@ -28,7 +27,7 @@
           </div>
           <div class="radio-container">
             <input name="effect" type="radio" class="radio" id="wah"></input>
-            <label for="wah">Wah Wah</label>
+            <label for="wah">Wah-wah</label>
           </div>
           <div class="radio-container"> 
             <input name="effect" type="radio" class="radio" id="pitch"></input>
@@ -45,6 +44,6 @@
         Source Code
       </a>
     </div>
-    <script src="index.js"></script>
+    <script src="src/index.js"></script>
   </body>
 </html>

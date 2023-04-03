@@ -1,7 +1,6 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 
 const audioInputSelector = document.getElementById('audio-input-select');
-const irButton = document.getElementById('ir-button');
 const currentEffectText = document.getElementById('current-effect-text');
 
 const volumeCheckbox = document.getElementById('volume');
@@ -19,8 +18,6 @@ const wahWahNode = createWahWah();
 let maxMouthHeight = 60;
 let minMouthHeight = 15;
 
-let irEnabled = true;
-
 let phaseVocoderNode;
 let lastPitchShiftFactor;
 
@@ -32,13 +29,6 @@ const effectStatus = {
 };
 
 let effects = [];
-
-irButton.addEventListener('click', () => {
-  const buttonText = irEnabled ? 'Enable IR' : 'Disable IR';
-  irEnabled = !irEnabled;
-  irButton.innerHTML = buttonText;
-  setupAudioContext();
-});
 
 volumeCheckbox.addEventListener('change', effectChanged);
 wahCheckbox.addEventListener('change', effectChanged);
@@ -62,7 +52,7 @@ function effectChanged(event) {
       effectText = 'Volume';
       break;
     case 'wah':
-      effectText = 'Wah Wah';
+      effectText = 'Wah-wah';
       break;
     case 'pitch':
       effectText = 'Pitch Shift';
@@ -72,7 +62,6 @@ function effectChanged(event) {
   }
   currentEffectText.innerHTML = effectText;
 }
-
 
 audioInputSelector.addEventListener('change', audioInputChanged);
 document.body.addEventListener('click', resumeAudioContext);
@@ -155,14 +144,14 @@ async function setupAudioContext() {
   const splitterNode = audioContext.createChannelSplitter(1);
 
   const convolverNode = audioContext.createConvolver();
-  convolverNode.buffer = await getImpulseBuffer(audioContext, 'ir.wav');
+  convolverNode.buffer = await getImpulseBuffer(audioContext, '/assets/ampIR.wav');
 
   const makeupGain = audioContext.createGain();
   makeupGain.gain.value = 5;
 
   const overdrive = createOverdrive();
 
-  await audioContext.audioWorklet.addModule('scripts/phase-vocoder.min.js');
+  await audioContext.audioWorklet.addModule('/libraries/phase-vocoder.min.js');
   phaseVocoderNode =
     new AudioWorkletNode(audioContext, 'phase-vocoder-processor');
 
@@ -203,7 +192,7 @@ async function setInputDevices() {
 
 async function getMic() {
   // Apply noise cancelling if the current device appears to be a mic instead
-  // of an audio interface. Otherwise there is annoying feedback.
+  // of an audio interface. Otherwise there can be high feedback.
   const isMicrophone = audioInputSelector.options[
     audioInputSelector.selectedIndex]?.text.toLowerCase().includes('mic');
   return navigator.mediaDevices.getUserMedia({
@@ -223,7 +212,7 @@ function audioInputChanged() {
 
 function createOverdrive() {
   const overdrive = audioContext.createWaveShaper();
-  overdrive.curve = makeDistortionCurve(200);
+  overdrive.curve = makeDistortionCurve(150);
   overdrive.oversample = '4x';
   return overdrive;
 }
@@ -347,7 +336,6 @@ function drawBox(detection) {
   ctx.stroke();
   ctx.closePath();
 }
-
 
 /** Draws facial features on the detected face. */
 function drawLandmarks(detection) {
