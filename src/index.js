@@ -98,12 +98,12 @@ let initialAudioNodeSetupCompleted = false;
 
 async function initialAudioNodeSetup() {
   // Creates a node for pitch shifting.
-  await audioContext.audioWorklet.addModule('/libraries/phase-vocoder.min.js');
+  await audioContext.audioWorklet.addModule('libraries/phase-vocoder.min.js');
   phaseVocoderNode =
     new AudioWorkletNode(audioContext, 'phase-vocoder-processor');
 
   convolverNode.buffer =
-    await getImpulseBuffer(audioContext, '/assets/ampIR.wav');
+    await getImpulseBuffer(audioContext, 'assets/ampIR.wav');
 
   initialAudioNodeSetupCompleted = true;
 }
