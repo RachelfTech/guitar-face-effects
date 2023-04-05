@@ -3,23 +3,46 @@ const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioInputSelector = document.getElementById('audio-input-select');
 const currentEffectText = document.getElementById('current-effect-text');
 
-const volumeCheckbox = document.getElementById('volume');
-const wahCheckbox = document.getElementById('wah');
-const pitchCheckbox = document.getElementById('pitch');
+const volumeRadio = document.getElementById('volume');
+const wahRadio = document.getElementById('wah');
+const pitchRadio = document.getElementById('pitch');
 
 const loadingSpinner = document.getElementById('loading-spinner');
 
+// Try to create the AudioContext with as low latency as possible.
+// Unfortunately, it's still quite high latency on Windows regardless.
 const audioContext = new AudioContext({ latencyHint: 0 });
+
+// Node for controlling output volume.
 const gainNode = audioContext.createGain();
 gainNode.gain.value = 1;
 
+// Wah-wah effect node.
 const wahWahNode = createWahWah();
 
+// These numbers are based on the numbers for my mouth.
 let maxMouthHeight = 60;
 let minMouthHeight = 15;
 
+// Node for pitch shifting. Set up in setupAudioContext.
 let phaseVocoderNode;
+
+// How much the pitch was shifed by in the last mouth update.
 let lastPitchShiftFactor;
+
+// This merges the audio channels so that it's played back on both left and 
+// right sides if it's a mono one sided output like with my 
+// Scarlette Focusrite 2i2.
+const splitterNode = audioContext.createChannelSplitter(1);
+
+// This node makes the guitar sound a bit more like it's playing through a 
+// real amp.
+const convolverNode = audioContext.createConvolver();
+
+const makeupGain = audioContext.createGain();
+makeupGain.gain.value = 5;
+
+const overdrive = createOverdrive();
 
 // Whether each effect is active or not.
 const effectStatus = {
@@ -28,26 +51,27 @@ const effectStatus = {
   'pitch': false,
 };
 
+// An array of Web Audio Nodes to connect.
 let effects = [];
 
-volumeCheckbox.addEventListener('change', effectChanged);
-wahCheckbox.addEventListener('change', effectChanged);
-pitchCheckbox.addEventListener('change', effectChanged);
+volumeRadio.addEventListener('change', effectChanged);
+wahRadio.addEventListener('change', effectChanged);
+pitchRadio.addEventListener('change', effectChanged);
 
 function effectChanged(event) {
-  const checkbox = event.target;
-  effectStatus[checkbox.id] = checkbox.checked;
+  const radio = event.target;
+  effectStatus[radio.id] = radio.checked;
 
   // Reset the other effects.
   for (const effect in effectStatus) {
-    if (effect !== checkbox.id) {
+    if (effect !== radio.id) {
       effectStatus[effect] = false;
     }
   }
 
   setupAudioContext();
   let effectText;
-  switch (checkbox.id) {
+  switch (radio.id) {
     case 'volume':
       effectText = 'Volume';
       break;
@@ -62,17 +86,30 @@ function effectChanged(event) {
   }
   currentEffectText.innerHTML = effectText;
 }
+// When the audio input changes, reset the Audio Context.
+audioInputSelector.addEventListener('change', setupAudioContext);
 
-audioInputSelector.addEventListener('change', audioInputChanged);
 document.body.addEventListener('click', resumeAudioContext);
 
+// The mic input device. Set in setInputDevices().
 let guitarAudio;
+
+async function initialAudioNodeSetup() {
+  // Creates a node for pitch shifting.
+  await audioContext.audioWorklet.addModule('/libraries/phase-vocoder.min.js');
+  phaseVocoderNode =
+    new AudioWorkletNode(audioContext, 'phase-vocoder-processor');
+
+  convolverNode.buffer =
+    await getImpulseBuffer(audioContext, '/assets/ampIR.wav');
+}
 
 async function startup() {
   // Set the input device before setting up the audio context
   // so that proper sound/echo cancelling can be applied depending
   // on the device type.
   await setInputDevices();
+  await initialAudioNodeSetup();
   setupAudioContext();
 }
 
@@ -81,7 +118,7 @@ startup();
 /** 
  * The audio context can only be started if the user interacts with the page.
  * Sometimes it can get into a suspended state and need to be resumed on 
- * user input.
+ * user input, this just helps ensure it doesn't stay suspended.
  */
 function resumeAudioContext() {
   if (audioContext.state === 'suspended') {
@@ -89,13 +126,17 @@ function resumeAudioContext() {
   }
 }
 
-const getImpulseBuffer = (audioCtx, impulseUrl) => {
-  return fetch(impulseUrl)
-    .then(response => response.arrayBuffer())
-    .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
-    .catch((e) => console.error(e));
+const getImpulseBuffer = async (audioCtx, impulseUrl) => {
+  try {
+    const response = await fetch(impulseUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    return audioCtx.decodeAudioData(arrayBuffer);
+  } catch (e) {
+    return console.error(e);
+  }
 }
 
+/** Connect all active effects together. */
 function connectEffects(guitarAudio) {
   let prevNode = guitarAudio;
   if (!effects.length) {
@@ -107,12 +148,14 @@ function connectEffects(guitarAudio) {
   for (let i = 1; i < effects.length; i++) {
     prevNode.connect(effects[i]);
     prevNode = effects[i];
+    // Connect the last node to the destination to allow for playback.
     if (i === effects.length - 1) {
       effects[i].connect(audioContext.destination);
     }
   }
 }
 
+/** Disconnect all active effects from the effects chain. */
 function disconnectEffects(guitarAudio) {
   if (guitarAudio) {
     guitarAudio.disconnect();
@@ -128,6 +171,8 @@ function disconnectEffects(guitarAudio) {
  * mic input to the output.
  */
 async function setupAudioContext() {
+  // Disconnect any existing nodes to make sure all state is cleared out when
+  // connecting them again.
   if (guitarAudio) {
     disconnectEffects(guitarAudio);
   }
@@ -138,26 +183,11 @@ async function setupAudioContext() {
   guitarAudio = audioContext.createMediaStreamSource(mic);
   guitarAudio.bufferSize = 128;
 
-  // This merges the audio channels so that it's played back on
-  // both left and right sides if it's a mono one sided output
-  // like with my Scarlette Focusrite 2i2.
-  const splitterNode = audioContext.createChannelSplitter(1);
-
-  const convolverNode = audioContext.createConvolver();
-  convolverNode.buffer = await getImpulseBuffer(audioContext, '/assets/ampIR.wav');
-
-  const makeupGain = audioContext.createGain();
-  makeupGain.gain.value = 5;
-
-  const overdrive = createOverdrive();
-
-  await audioContext.audioWorklet.addModule('/libraries/phase-vocoder.min.js');
-  phaseVocoderNode =
-    new AudioWorkletNode(audioContext, 'phase-vocoder-processor');
-
+  // Reset any pitch change.
   const pitchFactorParam = phaseVocoderNode.parameters.get('pitchFactor');
   pitchFactorParam.value = 1;
 
+  // Reset the gain node value to default.
   gainNode.gain.value = 1;
 
   // Add in all currently enabled effects. The order
@@ -173,6 +203,7 @@ async function setupAudioContext() {
 
   effects.push(...[convolverNode, makeupGain, overdrive, gainNode]);
 
+  // Connect all effects in the effects array.
   connectEffects(guitarAudio);
 }
 
@@ -192,7 +223,7 @@ async function setInputDevices() {
 
 async function getMic() {
   // Apply noise cancelling if the current device appears to be a mic instead
-  // of an audio interface. Otherwise there can be high feedback.
+  // of an audio interface. Otherwise there can be harsh feedback.
   const isMicrophone = audioInputSelector.options[
     audioInputSelector.selectedIndex]?.text.toLowerCase().includes('mic');
   return navigator.mediaDevices.getUserMedia({
@@ -204,10 +235,6 @@ async function getMic() {
       deviceId: audioInputSelector.value,
     }
   });
-}
-
-function audioInputChanged() {
-  setupAudioContext();
 }
 
 function createOverdrive() {
@@ -246,7 +273,6 @@ function createWahWah() {
  */
 let faceapi;
 let video;
-let detection;
 const width = 720;
 const height = 540;
 let canvas, ctx;
@@ -301,11 +327,16 @@ function createCanvas(w, h) {
 function gotResults(err, result) {
   if (err) {
     console.error(err);
+    // There are sometimes randomly errors with the face tracking API that 
+    // can only be fixed by reloading the page. Still need to investigate why
+    // this happens, but for now just show and alert and then reload the page.
+    alert("There was an error loading face tracking, please press ok to reload the page.")
+    location.reload();
     return;
   }
 
   // We only care about the first face detected.
-  detection = result[0];
+  const detection = result[0];
 
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, width, height);
@@ -381,7 +412,7 @@ function modifyActiveEffects(detection) {
     return;
   }
 
-  // My mouth height range is approximately 15 to 65.
+  // My mouth height range is approximately 15 to 60.
   const mouthHeight = findHeight(mouth);
 
   maxMouthHeight = Math.max(maxMouthHeight, mouthHeight);
