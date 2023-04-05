@@ -94,6 +94,8 @@ document.body.addEventListener('click', resumeAudioContext);
 // The mic input device. Set in setInputDevices().
 let guitarAudio;
 
+let initialAudioNodeSetupCompleted = false;
+
 async function initialAudioNodeSetup() {
   // Creates a node for pitch shifting.
   await audioContext.audioWorklet.addModule('/libraries/phase-vocoder.min.js');
@@ -102,6 +104,8 @@ async function initialAudioNodeSetup() {
 
   convolverNode.buffer =
     await getImpulseBuffer(audioContext, '/assets/ampIR.wav');
+
+  initialAudioNodeSetupCompleted = true;
 }
 
 async function startup() {
@@ -183,6 +187,11 @@ async function setupAudioContext() {
   guitarAudio = audioContext.createMediaStreamSource(mic);
   guitarAudio.bufferSize = 128;
 
+  // If the initial audio node setup hasn't happened because the Audio Context
+  // was not yet connected, do it now.
+  if (!initialAudioNodeSetupCompleted) {
+    await initialAudioNodeSetup();
+  }
   // Reset any pitch change.
   const pitchFactorParam = phaseVocoderNode.parameters.get('pitchFactor');
   pitchFactorParam.value = 1;
