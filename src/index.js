@@ -27,9 +27,6 @@ let minMouthHeight = 15;
 // Node for pitch shifting. Set up in setupAudioContext.
 let phaseVocoderNode;
 
-// How much the pitch was shifed by in the last mouth update.
-let lastPitchShiftFactor;
-
 // This merges the audio channels so that it's played back on both left and 
 // right sides if it's a mono one sided output like with my 
 // Scarlette Focusrite 2i2.
@@ -147,16 +144,17 @@ function connectEffects(guitarAudio) {
     guitarAudio.connect(audioContext.destination);
     return;
   }
-  guitarAudio.connect(effects[0]);
-  prevNode = effects[0];
+
+  const firstConnectedNode = effects[0];
+  guitarAudio.connect(firstConnectedNode);
+  prevNode = firstConnectedNode;
   for (let i = 1; i < effects.length; i++) {
     prevNode.connect(effects[i]);
     prevNode = effects[i];
-    // Connect the last node to the destination to allow for playback.
-    if (i === effects.length - 1) {
-      effects[i].connect(audioContext.destination);
-    }
   }
+
+  // Connect the last node to the destination to allow for playback.
+  effects[effects.length - 1].connect(audioContext.destination);
 }
 
 /** Disconnect all active effects from the effects chain. */
@@ -270,7 +268,7 @@ function makeDistortionCurve(amount) {
 function createWahWah() {
   const filter = audioContext.createBiquadFilter();
   filter.type = 'bandpass';
-  filter.Q.value = 1;
+  filter.Q.value = 3;
   filter.frequency.value = 1000;
 
   return filter;
@@ -438,19 +436,28 @@ function modifyActiveEffects(detection) {
   if (effectStatus.volume) {
     gainNode.gain.setValueAtTime(scale * 1.5, audioContext.currentTime);
   }
-  // Change pitch based on mouth height.
+
+  // Change pitch based on mouth height. The pitch factor is how much the 
+  // current node is scaled by. Keeping within the the 12 notes system, we can
+  // calculate the pitch factor with: 2**(s/12) where s is the amount of steps 
+  // you want to shift. See: 
+  // https://www.guitarpitchshifter.com/pitchshifting.html.
   if (effectStatus.pitch) {
     const pitchFactorParam = phaseVocoderNode.parameters.get('pitchFactor');
-    // Set the min pitch factor to .5 because it gets pretty distorted lower.
-    const pitchFactor = Math.max(.5, Math.round((scale * 3) * 10) / 10);
 
-    // Only shift the pitch if it has changed a decent amount since the last
-    // update to avoid constantly changing.
-    if (!lastPitchShiftFactor ||
-      Math.abs(lastPitchShiftFactor - pitchFactor) >= .15) {
-      pitchFactorParam.setValueAtTime(pitchFactor, audioContext.currentTime);
+    let pitchFactor;
+    if (scale < 0.2) {
+      // Scale the pitch down an octave.
+      pitchFactor = 0.5;
+    } else if (scale < 0.6) {
+      // Keep the pitch the same.
+      pitchFactor = 1;
+    } else {
+      // Scale the pitch up an octave.
+      pitchFactor = 2;
     }
-    lastPitchShiftFactor = pitchFactor;
+
+    pitchFactorParam.setValueAtTime(pitchFactor, audioContext.currentTime);
   }
 }
 
@@ -466,7 +473,16 @@ function findHeight(feature) {
 }
 
 function setWahWahFreq(value) {
+  // This is based on classic wah pedal frequency range.
   const maxFreq = 2200;
-  const newFreq = maxFreq * value;
+  const minFreq = 350;
+  const newFreq = lerp(minFreq, maxFreq, value);
   wahWahNode.frequency.setValueAtTime(newFreq, audioContext.currentTime);
+}
+
+/** 
+ * Returns a value between min and max based on amount (number between 0 and 1).
+ */
+function lerp(min, max, amount) {
+  return min + (max - min) * amount;
 }
