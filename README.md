@@ -10,7 +10,7 @@ but some of the effects don't work as well (pitch shifting in particular).
 You'll need a webcam and it will also work best if you have an audio interface 
 and select that as the mic input. I've primarily tested with an interface 
 (Scarlet Focusrite 2i2) so I'm not sure if it will really work without one.
-Make sure to allow both mic and webcam permissions browser permissions; if
+Make sure to allow both mic and webcam browser permissions; if
 it's not loading, the lack of permissions could be why.
 
 This is just for fun and I haven't tested it super thouroughly, so apologies if 
