@@ -1,6 +1,11 @@
 A [website](https://rachelf.com/guitar-face-effects/) where you can control 
 guitar effects by moving your mouth. Now you can put your guitar faces to good 
-use 😁!
+use! 😁
+
+Currently included effects:
+- Volume
+- Wah-wah
+- Pitch Shift
 
 How well this works varies between browsers and OS combinations. I've mostly tested
 on Windows with Chrome, but Windows unfortunately has a lot of latency due to
